@@ -1,0 +1,17 @@
+{
+    "name" : "mongo-sink",
+    "config" : {
+        "topics" : "debezium.sync.realtime_air", 
+        "max.batch.size" : "50",
+        "connection.uri" : "mongodb://localhost:27017/tick", 
+        "connector.class" : "com.mongodb.kafka.connect.MongoSinkConnector",
+        "change.data.capture.handler" : "com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler",
+        "key.converter" : "org.apache.kafka.connect.json.JsonConverter",
+        "key.converter.schemas.enable" : "true",
+        "value.converter" : "org.apache.kafka.connect.json.JsonConverter", 
+        "value.converter.schemas.enable" : "true",
+        "database" : "tick",
+        "collection" : "tickData",
+        "topic.override.debezium.sync.realtime_air.collection" : "realtime_air" 
+    }
+}

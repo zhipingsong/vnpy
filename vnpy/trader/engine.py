@@ -10,6 +10,9 @@ from queue import Empty, Queue
 from threading import Thread
 from typing import Any, Type, Dict, List, Optional
 
+import sys
+sys.path.append('/home/main_server/futures/vnpy_ctptest')
+
 from vnpy.event import Event, EventEngine
 from .app import BaseApp
 from .event import (
@@ -176,7 +179,7 @@ class MainEngine:
         """
         gateway: BaseGateway = self.get_gateway(gateway_name)
         if gateway:
-            gateway.subscribe(req)
+            gateway.md_api.subscribe(req)
 
     def send_order(self, req: OrderRequest, gateway_name: str) -> str:
         """

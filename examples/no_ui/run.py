@@ -4,14 +4,25 @@ from time import sleep
 from datetime import datetime, time
 from logging import INFO
 
+
+sys.path.append('/home/main_server/futures/vnpy')
+from vnpy.trader.object import ContractData
 from vnpy.event import EventEngine
 from vnpy.trader.setting import SETTINGS
 from vnpy.trader.engine import MainEngine
+from vnpy.trader.object import SubscribeRequest
+# from vnpy_ctp import CtpGateway
 
-from vnpy_ctp import CtpGateway
+# sys.path.append('/home/main_server/futures/vnpy_ctptest')
+
+from vnpy_ctptest import CtptestGateway
+
 from vnpy_ctastrategy import CtaStrategyApp
 from vnpy_ctastrategy.base import EVENT_CTA_LOG
-
+from vnpy_scripttrader import ScriptTraderApp, ScriptEngine
+from vnpy_datamanager import DataManagerApp
+sys.path.append('/home/main_server/futures/vnpy_datarecorder')
+from vnpy_datarecorder import DataRecorderApp
 
 SETTINGS["log.active"] = True
 SETTINGS["log.level"] = INFO
@@ -19,20 +30,19 @@ SETTINGS["log.console"] = True
 
 
 ctp_setting = {
-    "用户名": "",
-    "密码": "",
-    "经纪商代码": "",
-    "交易服务器": "",
-    "行情服务器": "",
-    "产品名称": "",
-    "授权编码": "",
-    "产品信息": ""
+    "用户名": "56004216",
+    "密码": "123abc456",
+    "经纪商代码": "7050",
+    "交易服务器": "tcp://121.13.217.131:44205",
+    "行情服务器": "tcp://121.13.217.131:44213",
+    "产品名称": "client_wendaoctp_v1.0",
+    "授权编码": "I4F8FNAUDACOWWON"
 }
 
 
 # Chinese futures market trading period (day/night)
 DAY_START = time(8, 45)
-DAY_END = time(15, 0)
+DAY_END = time(18, 0)
 
 NIGHT_START = time(20, 45)
 NIGHT_END = time(2, 45)
@@ -61,37 +71,52 @@ def run_child():
 
     event_engine = EventEngine()
     main_engine = MainEngine(event_engine)
-    main_engine.add_gateway(CtpGateway)
+    # main_engine.add_gateway(CtpGateway)
+    ctptest_gateway = main_engine.add_gateway(CtptestGateway)
+    # 连接ctp
+    gateway_name = "CTPTEST"
+    main_engine.connect(ctp_setting, gateway_name)
+    main_engine.write_log("连接CTP接口")
+
+
     cta_engine = main_engine.add_app(CtaStrategyApp)
+
+    dataRecordEngine = main_engine.add_app(DataRecorderApp)
     main_engine.write_log("主引擎创建成功")
 
     log_engine = main_engine.get_engine("log")
     event_engine.register(EVENT_CTA_LOG, log_engine.process_log_event)
     main_engine.write_log("注册日志事件监听")
 
-    main_engine.connect(ctp_setting, "CTP")
-    main_engine.write_log("连接CTP接口")
-
+    # 获取合约信息
+    all_contracts = main_engine.get_all_contracts()
     sleep(10)
+
+    # 订阅所有合约
+    for contract in all_contracts:
+        vt_symbol = contract.vt_symbol
+        main_engine.write_log("add_tick_recording:{}".format(vt_symbol))
+
+        dataRecordEngine.add_tick_recording(vt_symbol)
+    # 订阅行情
+
+
+    # scriptTraderEngine.subscribe(vt_symbols)
+
+    # 持续运行，使用strategy_active来判断是否要退出程序
+    # while scriptTraderEngine.strategy_active:
+        # 轮询获取行情
+
 
     cta_engine.init_engine()
     main_engine.write_log("CTA策略初始化完成")
 
     cta_engine.init_all_strategies()
-    sleep(60)   # Leave enough time to complete strategy initialization
+    sleep(10)   # Leave enough time to complete strategy initialization
     main_engine.write_log("CTA策略全部初始化")
 
     cta_engine.start_all_strategies()
     main_engine.write_log("CTA策略全部启动")
-
-    while True:
-        sleep(10)
-
-        trading = check_trading_period()
-        if not trading:
-            print("关闭子进程")
-            main_engine.close()
-            sys.exit(0)
 
 
 def run_parent():

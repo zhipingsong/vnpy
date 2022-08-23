@@ -1,0 +1,33 @@
+curl -X POST -H "Content-Type: application/json" --data '{}' http://localhost:8083/connectors
+
+curl -X GET http://localhost:8083/connectors
+curl http://localhost:8083
+
+curl http://localhost:8083/connector-plugins
+
+/usr/local/kafka/bin/connect-standalone.sh /usr/local/kafka/config/connect-standalone.properties
+
+/usr/local/kafka/bin/connect-distributed.sh /usr/local/kafka/config/connect-distributed.properties
+/usr/local/share/kafka/plugins
+/usr/bin/java
+curl -X POST \
+     -H "Content-Type: application/json" \
+     --data '
+     {"name": "mongo-sink",
+      "config": {
+        "topics" : "tick",
+        "connector.class":"com.mongodb.kafka.connect.MongoSinkConnector",
+        "max.batch.size" : "200",
+        "connection.uri":"mongodb://localhost:27017/",
+        "database":"futures",
+        "collection":"tick",
+        "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+        "value.converter.schemas.enable" : "false"
+        }
+     }
+     ' \
+     http://localhost:8083/connectors -w "\n"
+
+curl -X GET localhost:8083/connectors/mongo-sink/status
+
+curl -X DELETE localhost:8083/connectors/mongo-sink
